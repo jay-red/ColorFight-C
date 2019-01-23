@@ -53,6 +53,21 @@ char *post_json( const char *url, const char *data ) {
 
 int refresh() {
 	char *responseText = post_json( "https://pastebin.com/raw/uJ80RjqT", "{\"protocol\": 2, \"display\": true}" );
+	size_t i;
+	int flag = 0;
+	int escaped = 0;
+	for( i = 0; responseText[ i ]; i++ ) {
+		if( responseText[ i ] == '\\' ) {
+			escaped = 1;
+		} else if( !escaped && responseText[ i ] == '"' ) {
+			flag = !flag;
+		} else if( flag ) {
+			printf( "%c", responseText[ i ] );
+		}
+		if( escaped ) {
+			escaped = 0;
+		}
+	}
 	printf( "%s", responseText );
 	free( responseText );
 	return 1;
