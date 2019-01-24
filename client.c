@@ -5,7 +5,36 @@
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
-#include "jsmn.h"
+
+struct user {
+	int id;
+	char *name;
+	double cdTime;
+	double buildCdTime;
+	int cellNum;
+	int baseNum;
+	int goldCellNum;
+	int energyCellNum;
+	int energy;
+	int gold;
+};
+
+struct cell {
+	int owner;
+	int attacker;
+	int isTaking;
+	int x;
+	int y;
+	float occupyTime;
+	float attackTime;
+	float takeTime;
+	float finishTime;
+	int cellType;
+	//int buildType;
+	int isBase;
+	int isBuilding;
+	float buildTime;
+};
 
 struct response {
 	char *text;
@@ -54,21 +83,43 @@ char *post_json( const char *url, const char *data ) {
 int refresh() {
 	char *responseText = post_json( "https://pastebin.com/raw/uJ80RjqT", "{\"protocol\": 2, \"display\": true}" );
 	size_t i;
-	int flag = 0;
+	int foundString = 0;
 	int escaped = 0;
+	int braces = 0;
+	int bufferIndex = 0;
+	char buffer[ 64 ];
+	buffer[ 0 ] = '\0';
 	for( i = 0; responseText[ i ]; i++ ) {
-		if( responseText[ i ] == '\\' ) {
+		if( responseText[ i ] == '{' ) {
+			++braces;
+		} else if( responseText[ i ] == '}' ) {
+			--braces;
+		} else if( responseText[ i ] == '\\' ) {
 			escaped = 1;
 		} else if( !escaped && responseText[ i ] == '"' ) {
-			flag = !flag;
-		} else if( flag ) {
-			printf( "%c", responseText[ i ] );
+			foundString = !foundString;
+			if( !foundString ) {
+				if( responseText[ i + 1 ] == ':' ) {
+					printf( "%s", "Key Found: " );
+				}
+				buffer[ bufferIndex ] = '\0';
+				bufferIndex = 0;
+				printf( "%s", buffer );
+				printf( "%c", '\n' );
+			}
+		} else if( foundString) {
+			//printf( "%c", responseText[ i ] );
+			buffer[ bufferIndex++ ] = responseText[ i ];
 		}
 		if( escaped ) {
 			escaped = 0;
 		}
+		if( responseText[ i + 1 ] == '}' && braces - 1 == 0 ) {
+			printf( "%c", '\n' );
+			break;
+		}
 	}
-	printf( "%s", responseText );
+	printf( "%c", '\n' );
 	free( responseText );
 	return 1;
 }
