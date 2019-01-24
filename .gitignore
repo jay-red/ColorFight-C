@@ -1,2 +1,2 @@
-jsmn.c
-jsmn.h
+*.o
+main

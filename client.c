@@ -6,6 +6,9 @@
 #include <string.h>
 #include <curl/curl.h>
 
+char buffer[ 64 ];
+int i;
+
 struct user {
 	int id;
 	char *name;
@@ -80,28 +83,68 @@ char *post_json( const char *url, const char *data ) {
 	return (&r)->text;
 }
 
-int processCells( char *buffer, char *responseText, int i ) {
+int nextKey( char *responseText ) {
+	int foundString = 0;
+	int bufferPosition = 0;
 	for( ; responseText[ i ]; i++ ) {
+		if( responseText[ i ] == '"' ) {
+			foundString = !foundString;
+			if( !foundString ) {
+				buffer[ bufferPosition ] = '\0';
+				bufferPosition = 0;
+				return 1;
+			}
+		} else if( foundString ) {
+			buffer[ bufferPosition++ ] = responseText[ i ];
+		}
+	}
+	return 0;
+}
+
+void processCells( char *responseText ) {
+	for( ; responseText[ i ] != '{'; i++ ) {
 		
 	}
 }
 
-int processUsers( char *buffer, char *responseText, int i ) {
-	for( ; responseText[ i ]; i++ ) {
+void processUsers( char *responseText ) {
+	for( ; responseText[ i ] != '{'; i++ ) {
+
+	}
+}
+
+void processInfo( char *responseText ) {
+	for( ; responseText[ i ] != '{'; i++ ) {
 
 	}
 }
 
 int refresh() {
 	char *responseText = post_json( "https://pastebin.com/raw/uJ80RjqT", "{\"protocol\": 2, \"display\": true}" );
-	int i;
-	int foundString = 0;
-	int escaped = 0;
-	int braces = 0;
-	int bufferIndex = 0;
-	char buffer[ 64 ];
+	i = 0;
 	buffer[ 0 ] = '\0';
-	/*for( i = 0; responseText[ i ]; i++ ) {
+	int nextExists = nextKey( responseText );
+	while( nextExists ) {
+		printf( "%s\n", buffer );
+		if( strcmp( buffer, "users" ) == 0 ) {
+			processUsers( responseText );
+			printf( "\n%s\n\n", "Processing Users" );
+		} else if( strcmp( buffer, "cells" ) == 0 ) {
+			processCells( responseText );
+			printf( "\n%s\n\n", "Processing Cells" );
+		} else if( strcmp( buffer, "info" ) == 0 ) {
+			processInfo( responseText );
+			printf( "\n%s\n\n", "Processing Info" );
+		}
+		i++;
+		nextExists = nextKey( responseText );
+	}
+	printf( "%c", '\n' );
+	free( responseText );
+	return 1;
+}
+
+/*for( i = 0; responseText[ i ]; i++ ) {
 		if( responseText[ i ] == '{' ) {
 			++braces;
 		} else if( responseText[ i ] == '}' ) {
@@ -131,10 +174,3 @@ int refresh() {
 			break;
 		}
 	}*/	
-	for( i = 0; responseText[ i ]; i++ ) {
-		printf( "%c", responseText[ i ] );
-	}
-	printf( "%c", '\n' );
-	free( responseText );
-	return 1;
-}
