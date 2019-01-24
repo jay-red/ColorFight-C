@@ -80,16 +80,28 @@ char *post_json( const char *url, const char *data ) {
 	return (&r)->text;
 }
 
+int processCells( char *buffer, char *responseText, int i ) {
+	for( ; responseText[ i ]; i++ ) {
+		
+	}
+}
+
+int processUsers( char *buffer, char *responseText, int i ) {
+	for( ; responseText[ i ]; i++ ) {
+
+	}
+}
+
 int refresh() {
 	char *responseText = post_json( "https://pastebin.com/raw/uJ80RjqT", "{\"protocol\": 2, \"display\": true}" );
-	size_t i;
+	int i;
 	int foundString = 0;
 	int escaped = 0;
 	int braces = 0;
 	int bufferIndex = 0;
 	char buffer[ 64 ];
 	buffer[ 0 ] = '\0';
-	for( i = 0; responseText[ i ]; i++ ) {
+	/*for( i = 0; responseText[ i ]; i++ ) {
 		if( responseText[ i ] == '{' ) {
 			++braces;
 		} else if( responseText[ i ] == '}' ) {
@@ -118,6 +130,9 @@ int refresh() {
 			printf( "%c", '\n' );
 			break;
 		}
+	}*/	
+	for( i = 0; responseText[ i ]; i++ ) {
+		printf( "%c", responseText[ i ] );
 	}
 	printf( "%c", '\n' );
 	free( responseText );
