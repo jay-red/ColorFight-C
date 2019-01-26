@@ -5,44 +5,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
+#include "client.h"
 
 char buffer[ 64 ];
 int i;
 
-struct user {
-	int id;
-	char *name;
-	double cdTime;
-	double buildCdTime;
-	int cellNum;
-	int baseNum;
-	int goldCellNum;
-	int energyCellNum;
-	int energy;
-	int gold;
-};
-
-struct cell {
-	int owner;
-	int attacker;
-	int isTaking;
-	int x;
-	int y;
-	float occupyTime;
-	float attackTime;
-	float takeTime;
-	float finishTime;
-	int cellType;
-	//int buildType;
-	int isBase;
-	int isBuilding;
-	float buildTime;
-};
-
-struct response {
-	char *text;
-	size_t size;
-};
+void init_game( struct game *g ) {
+	g->token = malloc( 64 * sizeof( *( g->token ) ) );
+	g->token[ 0 ] = '\0';
+	g->cells = malloc( 900 * sizeof( *( g->cells ) ) );
+	/*for( int j = 0; j < 900; j++ ) {
+		g->cells[ j ] = malloc( sizeof( struct cell ) );
+	}*/
+}
 
 void init_response( struct response *r ) {
 	r->size = 0;
@@ -145,8 +120,7 @@ void printCell( struct cell *c ) {
 	printf( "Build Time: %f\n\n", c->buildTime );
 }
 
-void processCells( char *responseText ) {
-	struct cell *cells = malloc( 900 * sizeof( *cells ) );
+void processCells( struct game *g, char *responseText ) {
 	int cellIndex = 0;
 	for( ; responseText[ i ] != '['; i++ ) {
 
@@ -155,50 +129,49 @@ void processCells( char *responseText ) {
 		nextKey( responseText );
 		i++;
 		if( matchKey( responseText, "o" ) ) {
-			cells[ cellIndex ].owner = atoi( buffer );
+			g->cells[ cellIndex ].owner = atoi( buffer );
 		} else if( matchKey( responseText, "a" ) ) {
-			cells[ cellIndex ].attacker = atoi( buffer );
+			g->cells[ cellIndex ].attacker = atoi( buffer );
 		} else if( matchKey( responseText, "c" ) ) {
-			cells[ cellIndex ].isTaking = atoi( buffer ) == 1;
+			g->cells[ cellIndex ].isTaking = atoi( buffer ) == 1;
 		} else if( matchKey( responseText, "x" ) ) {
-			cells[ cellIndex ].x = atoi( buffer );
+			g->cells[ cellIndex ].x = atoi( buffer );
 		} else if( matchKey( responseText, "y" ) ) {
-			cells[ cellIndex ].y = atoi( buffer );
+			g->cells[ cellIndex ].y = atoi( buffer );
 		} else if( matchKey( responseText, "ot" ) ) {
-			cells[ cellIndex ].occupyTime = atof( buffer );
+			g->cells[ cellIndex ].occupyTime = atof( buffer );
 		} else if( matchKey( responseText, "at" ) ) {
-			cells[ cellIndex ].attackTime = atof( buffer );
+			g->cells[ cellIndex ].attackTime = atof( buffer );
 		} else if( matchKey( responseText, "t" ) ) {
-			cells[ cellIndex ].takeTime = atof( buffer );
+			g->cells[ cellIndex ].takeTime = atof( buffer );
 		} else if( matchKey( responseText, "f" ) ) {
-			cells[ cellIndex ].finishTime = atof( buffer );
+			g->cells[ cellIndex ].finishTime = atof( buffer );
 		} else if( matchKey( responseText, "ct" ) ) {
 			if( strcmp( buffer, "energy" ) == 0 ) {
-				cells[ cellIndex ].cellType = 1;
+				g->cells[ cellIndex ].cellType = 1;
 			} else if( strcmp( buffer, "gold" ) == 0 ) {
-				cells[ cellIndex ].cellType = 2;
+				g->cells[ cellIndex ].cellType = 2;
 			} else {
-				cells[ cellIndex ].cellType = 0;
+				g->cells[ cellIndex ].cellType = 0;
 			}
 		} else if( matchKey( responseText, "b" ) ) {
-			cells[ cellIndex ].isBase = strcmp( buffer, "base" ) == 1;
+			g->cells[ cellIndex ].isBase = strcmp( buffer, "base" ) == 1;
 		} else if( matchKey( responseText, "bf" ) ) {
-			cells[ cellIndex ].isBuilding = strcmp( buffer, "false" ) == 0	;
+			g->cells[ cellIndex ].isBuilding = strcmp( buffer, "false" ) == 0	;
 		} else if( matchKey( responseText, "bt" ) ) {
-			cells[ cellIndex ].buildTime = atof( buffer );
+			g->cells[ cellIndex ].buildTime = atof( buffer );
 		} else {
 			nextValue( responseText );
 		}
 		if( responseText[ i ] == '}' ) {
-			printf( "Cell %d\n", cellIndex );
-			printCell( cells + cellIndex );
+			//printf( "Cell %d\n", cellIndex );
+			//printCell( g->cells + cellIndex );
 			cellIndex += 1;
 		}
 	}
-	free( cells );
 }
 
-void processUsers( char *responseText ) {
+void processUsers( struct game *g, char *responseText ) {
 	for( ; responseText[ i ] != '['; i++ ) {
 		
 	}
@@ -211,14 +184,14 @@ void processUsers( char *responseText ) {
 	}
 }
 
-void processInfo( char *responseText ) {
+void processInfo( struct game *g, char *responseText ) {
 	for( ; responseText[ i ] != '{'; i++ ) {
 
 	}
 }
 
-int refresh() {
-	char *responseText = post_json( "http://colorfight.herokuapp.com/getgameinfo", "{\"protocol\": 2, \"display\": true}" );
+int Refresh( struct game *g ) {
+	char *responseText = post_json( "http://colorfight.herokuapp.com/getgameinfo", "{\"protocol\": 2}" );
 	i = 0;
 	buffer[ 0 ] = '\0';
 	int nextExists = nextKey( responseText );
@@ -226,19 +199,156 @@ int refresh() {
 		printf( "%s\n", buffer );
 		if( strcmp( buffer, "users" ) == 0 ) {
 			printf( "\n%s\n\n", "Processing Users" );
-			processUsers( responseText );
+			processUsers( g, responseText );
 		} else if( strcmp( buffer, "cells" ) == 0 ) {
 			printf( "\n%s\n\n", "Processing Cells" );
-			processCells( responseText );
+			processCells( g, responseText );
 		} else if( strcmp( buffer, "info" ) == 0 ) {
 			printf( "\n%s\n\n", "Processing Info" );
-			processInfo( responseText );	
+			processInfo( g, responseText );	
 		}
 		nextExists = nextKey( responseText );
 	}
 	printf( "%c", '\n' );
 	free( responseText );
 	return 1;
+}
+
+int CheckToken( struct game *g, char *name, char *token ) {
+	printf( "Checking token: %s\n", token );
+	printf( "%s\n", "break1" );
+	char *data = malloc( 64 * sizeof( *data ) );
+	printf( "%s\n", "break2" );
+	char *tempName = malloc( 64 * sizeof( *tempName ) );
+	printf( "%s\n", "break3" );
+	data[ 0 ] = '\0';
+	printf( "%s\n", "break4" );
+	strcat( data, "{\"token\":\"" );
+	printf( "%s\n", "break5" );
+	strcat( data, token );
+	printf( "%s\n", "break6" );
+	strcat( data, "\"}" );
+	printf( "%s\n", "break7" );
+	char *responseText = post_json( "http://colorfight.herokuapp.com/checktoken", data );
+	printf( "%s\n", "break8" );
+	free( data );
+	printf( "%s\n", "break9" );
+	i = 0;
+	int nextExists = nextKey( responseText );
+	while( nextExists ) {
+		i++;
+		printf( "%s\n", buffer );
+		if( matchKey( responseText, "uid" ) ) {
+			printf( "%s\n", buffer );
+			g->uid = atoi( buffer );
+		} else if( matchKey( responseText, "name" ) ) {
+			strcat( tempName, buffer );
+			if( strcmp( tempName, name ) != 0 ) {
+				free( responseText );
+				free( tempName );
+				return 0;
+			}
+			free( tempName );
+		} else if( matchKey( responseText, "msg" ) ) {
+			free( responseText );
+			return 0;
+		} else {
+			nextValue( responseText );
+		}
+		nextExists = nextKey( responseText );
+	}
+	free( responseText );
+	strcat( g->token, token );
+	return 1;
+}
+
+int JoinGame( struct game *g, char *name ) {
+	printf( "Joining game as: %s\n", name );
+	FILE *tokenPtr;
+	tokenPtr = fopen( "token", "r" );
+	if( tokenPtr != NULL ) {
+		char *token = malloc( 64 * sizeof( *token ) );;
+		fscanf( tokenPtr, "%s", token );
+		fclose( tokenPtr );
+		if( CheckToken( g, name, token ) ) {
+			return 1;
+		}
+	}
+	char *responseText;
+	char *data = malloc( 64 * sizeof( *data ) );
+	data[ 0 ] = '\0';
+	strcat( data, "{\"name\":\"" );
+	strcat( data, name );
+	strcat( data, "\"}" );
+	responseText = post_json( "http://colorfight.herokuapp.com/joingame", data );
+	free( data );
+	printf( "%s\n", responseText );
+	i = 0;
+	int nextExists = nextKey( responseText );
+	while( nextExists ) {
+		i++;
+		printf( "%s\n", buffer );
+		if( matchKey( responseText, "uid" ) ) {
+			printf( "%s\n", buffer );
+			g->uid = atoi( buffer );
+		} else if( matchKey( responseText, "token" ) ) {
+			strcat( g->token, buffer );
+			printf( "%s\n", g->token );
+			tokenPtr = fopen( "token", "w" );
+			fprintf( tokenPtr, "%s", g->token );
+			fclose( tokenPtr );
+		} else {
+			nextValue( responseText );
+		}
+		nextExists = nextKey( responseText );
+	}
+	free( responseText );
+	return 1;
+}
+
+int AttackCell( struct game *g, int x, int y, int boost ) {
+	char *data = malloc( 100 * sizeof( *data ) );
+	char *cellx = malloc( 2 * sizeof( *cellx ) );
+	char *celly = malloc( 2 * sizeof( *celly ) );
+	sprintf( cellx, "%d", x );
+	sprintf( celly, "%d", y );
+	data[ 0 ] = '\0';
+	strcat( data, "{\"cellx\":" );
+	strcat( data, cellx );
+	strcat( data, ",\"celly\":" );
+	strcat( data, celly );
+	strcat( data, ",\"boost\":" );
+	if( boost ) {
+		strcat( data, "true" );
+	} else {
+		strcat( data, "false" );
+	}
+	strcat( data, ",\"token\":\"" );
+	strcat( data, g->token );
+	strcat( data, "\"}" );
+	char* responseText = post_json( "http://colorfight.herokuapp.com/attack", data );
+	free( data );
+	printf( "%s\n", responseText );
+	i = 0;
+	int nextExists = nextKey( responseText );
+	while( nextExists ) {
+		i++;
+		if( matchKey( responseText, "err_code" ) ) {
+			return atoi( buffer );
+		} else {
+			nextValue( responseText );
+		}
+		nextExists = nextKey( responseText );
+	}
+	free( responseText );
+	return 1;
+}
+
+struct cell *GetCell( struct game *g, int x, int y ) {
+	if( x < 0 || x > 29 || y < 0 || y > 29 ) {
+		return NULL;
+	}
+	return g->cells + ( y * 30 + x );
 }
 
 /*for( i = 0; responseText[ i ]; i++ ) {
