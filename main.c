@@ -34,11 +34,8 @@ int main( int argc, char** argv ) {
 						cc = GetCell( g, x - 1, y );
 					}
 					if( cc != NULL ) {
-						if( cc->owner != g->uid && cc->takeTime <= 4.0 && cc->takeTime >= 0 ) {
+						if( cc->owner != g->uid && cc->takeTime <= 4.0 && !cc->isTaking ) {
 							data = AttackCell( g, cc->x, cc->y, 0 );
-							while( data == 3 ) {
-								data = AttackCell( g, cc->x, cc->y, 0 );
-							}
 						}
 					}
 				}
