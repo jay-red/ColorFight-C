@@ -177,10 +177,8 @@ void processUsers( struct game *g, char *responseText ) {
 	}
 	while( responseText[ i + 1 ] != ']' ) {
 		nextKey( responseText );
-		printf( "Key: %s\n", buffer );
 		i++;
 		nextValue( responseText );
-		printf( "Value: %s\n\n", buffer );
 	}
 }
 
